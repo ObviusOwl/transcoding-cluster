@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import sys
+import os 
+import signal
+
+sys.path.insert(0, os.path.abspath( os.path.join(os.path.dirname(__file__), '..') ) )
+
+from transcoding_cluster_cli import cli_app
+from transcoding_cluster import errors
+
+
+def sigterm_handler(_signo, _stack_frame):
+    # raise SystemExit
+    sys.exit(0)
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    a = cli_app.CliApp()
+    
+    apiUrl = os.getenv('TRANSCODING_CLUSTER_API')
+    if apiUrl != None:
+        a.apiBaseUrl = apiUrl
+
+    workerId = os.getenv('TRANSCODING_CLUSTER_WORKER_ID')
+    if workerId != None:
+        a.workerId = workerId
+
+    try:
+        a.parseArgs()
+        a.loadApiClient()
+        a.dispatchSubcommand()
+    except KeyboardInterrupt as e:
+        sys.exit(1)
+    except errors.ApiError as e:
+        print( str(e) )
+        sys.exit(1)
