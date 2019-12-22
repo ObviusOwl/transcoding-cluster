@@ -5,6 +5,7 @@ from flask import Flask
 from flask import jsonify
 
 from .db import Database
+from .config import Config
 from transcoding_cluster import errors
 
 from .api.task import TaskAPI
@@ -12,16 +13,12 @@ from .api.task_dependencies import TaskDependenciesAPI
 from .api.worker import WorkerAPI
 from .api.scheduler_request import SchedulerRequestAPI
 
-def load_config():
-    config = configparser.ConfigParser()
-    config.read( os.environ['TRANSCODING_CLUSTER_CONFIG'] )
-    return config
-
 def create_app():
     # TODO: load DEV or PROD config depending on flask env
-    cnf = load_config()
-    sec = "DEFAULT"
-    db = Database( cnf[sec]["db_host"], cnf[sec]["db_port"], cnf[sec]["db_user"], cnf[sec]["db_password"], cnf[sec]["db_name"] )
+    cnf = Config()
+    cnf.loadFile( os.environ['TRANSCODING_CLUSTER_CONFIG'] )
+    db = Database( cnf )
+    
 
     app = Flask(__name__, instance_relative_config=True)
     @app.errorhandler(errors.ApiError)

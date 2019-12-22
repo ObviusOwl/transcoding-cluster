@@ -7,16 +7,14 @@ from transcoding_cluster import worker
 
 class Database( object ):
     
-    def __init__(self, dbHost, dbPort, dbUser, dbPassword, dbName):
-        self.dbHost = dbHost
-        self.dbPort = dbPort
-        self.dbUser = dbUser
-        self.dbPassword = dbPassword
-        self.dbName = dbName
-
-        self.dbh = mysql.connector.connect( 
-            user=self.dbUser , password=self.dbPassword, 
-            database=self.dbName, host=self.dbHost, port=self.dbPort )
+    def __init__(self, config ):
+        self._cnf = config
+        
+        opts = { "host": config["db_host"], "port": config["db_port"], 
+                "user": config["db_user"], "password": config["db_password"], 
+                "database": config["db_name"] }
+        
+        self.dbh = mysql.connector.connect( **opts )
         
         self.lock = RLock()
         self.autoCommit = True
