@@ -74,6 +74,19 @@ class Database( object ):
     def _requireWorkerId(self, w):
         if w.id == None:
             raise errors.DatabaseError( "worker.id is None" )
+
+    def _commit(self, force=False):
+        if self.autoCommit or force:
+            self.dbh.commit()
+
+    def _rollback(self, force=False):
+        if self.autoCommit or force:
+            self.dbh.rollback()
+    
+    def _query(self, queryStr, params=None ):
+        cur = self.dbh.cursor()
+        cur.execute( queryStr, params )
+        return cur
     
     #
     #   Task
@@ -86,13 +99,11 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             for r in cur:
                 t.depends.append( r[0] )
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
         
     
@@ -102,13 +113,10 @@ class Database( object ):
         params = (taskId,)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
-            print(data)
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
 
         t = self._taskFromRow( data )
@@ -126,15 +134,13 @@ class Database( object ):
             params = (offset, count)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
                 if t != None:
                     data.append( t )
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
         
         for t in data:
@@ -146,15 +152,13 @@ class Database( object ):
         data = []
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
                 if t != None:
                     data.append( t )
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
 
         for t in data:
@@ -170,16 +174,13 @@ class Database( object ):
         taskId = None
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit( True )
             taskId = cur.lastrowid
             t.id = taskId
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -193,13 +194,13 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
+        except mysql.connector.errors.IntegrityError:
+            self._rollback()
+            raise errors.DatabaseError( "Task is a Dependency from another task." )
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -232,13 +233,10 @@ class Database( object ):
         params.append( t.id )
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -249,15 +247,13 @@ class Database( object ):
         params = { "tid" : taskId, "depid": depId}
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except mysql.connector.errors.IntegrityError:
+            self._rollback()
             raise errors.DatabaseError( "Dependency exists." )
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -267,13 +263,10 @@ class Database( object ):
         params = (taskId,depId)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -290,12 +283,10 @@ class Database( object ):
         params = (workerId,)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
         
         return self._workerFromRow( data )
@@ -310,14 +301,12 @@ class Database( object ):
             params = (offset, count)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
+            cur = self._query( quer, params )
             for r in cur:
                 row = self._rowToDict( cur.column_names, r )
                 data.append( self._workerFromRow( row ) )
         finally:
-            if self.autoCommit:
-                self.dbh.commit()
+            self._commit()
             cur.close()
         
         return data
@@ -327,13 +316,10 @@ class Database( object ):
         params = { "id" : w.id, "dr": w.drain}
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -348,13 +334,10 @@ class Database( object ):
         params = (w.id,)
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
@@ -380,13 +363,10 @@ class Database( object ):
         params.append( w.id )
         
         try:
-            cur = self.dbh.cursor()
-            cur.execute(quer, params )
-            if self.autoCommit:
-                self.dbh.commit()
+            cur = self._query( quer, params )
+            self._commit()
         except Exception as e:
-            if self.autoCommit:
-                self.dbh.rollback()
+            self._rollback()
             raise e from None
         finally:
             cur.close()
