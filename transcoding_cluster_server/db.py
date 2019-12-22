@@ -99,7 +99,8 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             for r in cur:
                 t.depends.append( r[0] )
         finally:
@@ -113,7 +114,8 @@ class Database( object ):
         params = (taskId,)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
         finally:
             self._commit()
@@ -134,7 +136,8 @@ class Database( object ):
             params = (offset, count)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
                 if t != None:
@@ -152,7 +155,8 @@ class Database( object ):
         data = []
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
                 if t != None:
@@ -174,7 +178,8 @@ class Database( object ):
         taskId = None
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit( True )
             taskId = cur.lastrowid
             t.id = taskId
@@ -194,7 +199,8 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except mysql.connector.errors.IntegrityError:
             self._rollback()
@@ -233,7 +239,8 @@ class Database( object ):
         params.append( t.id )
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except Exception as e:
             self._rollback()
@@ -247,7 +254,8 @@ class Database( object ):
         params = { "tid" : taskId, "depid": depId}
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except mysql.connector.errors.IntegrityError:
             self._rollback()
@@ -263,7 +271,8 @@ class Database( object ):
         params = (taskId,depId)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except Exception as e:
             self._rollback()
@@ -283,7 +292,8 @@ class Database( object ):
         params = (workerId,)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
         finally:
             self._commit()
@@ -301,7 +311,8 @@ class Database( object ):
             params = (offset, count)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             for r in cur:
                 row = self._rowToDict( cur.column_names, r )
                 data.append( self._workerFromRow( row ) )
@@ -316,7 +327,8 @@ class Database( object ):
         params = { "id" : w.id, "dr": w.drain}
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except Exception as e:
             self._rollback()
@@ -334,7 +346,8 @@ class Database( object ):
         params = (w.id,)
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except Exception as e:
             self._rollback()
@@ -363,7 +376,8 @@ class Database( object ):
         params.append( w.id )
         
         try:
-            cur = self._query( quer, params )
+            cur = self.dbh.cursor()
+            cur.execute( quer, params )
             self._commit()
         except Exception as e:
             self._rollback()
