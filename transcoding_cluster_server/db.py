@@ -10,9 +10,14 @@ class Database( object ):
     def __init__(self, config ):
         self._cnf = config
         
+        try:
+            poolSize = int( self._cnf[ "db_pool_size" ] )
+        except (KeyError, ValueError):
+            poolSize = 10
+        
         opts = { "host": config["db_host"], "port": config["db_port"], 
                 "user": config["db_user"], "password": config["db_password"], 
-                "database": config["db_name"] }
+                "database": config["db_name"], "pool_size": poolSize }
         
         self.dbh = mysql.connector.connect( **opts )
         
