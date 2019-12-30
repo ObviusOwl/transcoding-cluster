@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends\
         python3-lxml \
         ffmpeg \
         libavcodec-extra \
+        uwsgi \
+        uwsgi-plugin-python3 \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 
