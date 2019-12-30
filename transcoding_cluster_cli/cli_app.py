@@ -93,11 +93,20 @@ class CliApp( object ):
         workerGr.add_argument('-u','--update', action="store", dest="worker_update_id",
                             metavar='NAME', help='Update worker')
 
+        servP = subparsers.add_parser( 'server', help='Start developpement server' )
+        servP.add_argument('conf', action="store",
+                            metavar='FILE.INI', help='Server configuration file')
+        servP.add_argument('-H','--host', action="store", dest="server_host", default="0.0.0.0",
+                            metavar='NAME', help='Listen on IP NAME defaults to 0.0.0.0' )
+        servP.add_argument('-p','--port', action="store", dest="server_port", default=5000, type=int,
+                            metavar='PORT', help='Listen on port PORT defaults to 5000' )
     
         self.args = parser.parse_args()
     
     def loadApiClient(self):
         assert self.args != None
+        if self.args.subcommand == "server":
+            return
         
         if self.args.api_url != None:
             self.apiBaseUrl = self.args.api_url
@@ -135,6 +144,8 @@ class CliApp( object ):
                 self.updateWorker()
             elif self.args.worker_new_id != None:
                 self.createWorker()
+        elif self.args.subcommand == "server":
+            self.runServer()
     
     def createTask( self ):
         assert self.client != None
@@ -243,3 +254,8 @@ class CliApp( object ):
         exec = WorkExecutor( self.client, workerId )
         exec.pollWaitTime = self.args.worker_poll
         exec.mainLoop()
+
+    def runServer(self):
+        from transcoding_cluster_server import create_app
+        app = create_app()
+        app.run( host=self.args.server_host, port=self.args.server_port )
