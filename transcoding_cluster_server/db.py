@@ -15,20 +15,37 @@ class Database( object ):
         except (KeyError, ValueError):
             poolSize = 10
         
-        opts = { "host": config["db_host"], "port": config["db_port"], 
+        self.opts = { "host": config["db_host"], "port": config["db_port"], 
                 "user": config["db_user"], "password": config["db_password"], 
                 "database": config["db_name"], "pool_size": poolSize }
-        
-        self.dbh = mysql.connector.connect( **opts )
-        
         self.lock = RLock()
         self.autoCommit = True
+
+        self._connect()
 
     def __enter__(self):
         self.lock.acquire()
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.lock.release()
+
+    def _connect(self):
+        self.dbh = mysql.connector.connect( **self.opts )
+
+    def reconnect(self):
+        # reconnect if connection was lost
+        try:
+            self.dbh.ping( reconnect=True, attempts=3, delay=5 )
+        except mysql.connector.Error as err:
+            self._connect()
+
+    def cursor(self):
+        self.reconnect()
+        return self.dbh.cursor()
+
+    def start_transaction(self, *args, **kwargs):
+        self.reconnect()
+        self.dbh.start_transaction( *args, **kwargs )
 
     def _taskFromRow( self, data ):
         if data == None:
@@ -83,11 +100,6 @@ class Database( object ):
         if self.autoCommit or force:
             self.dbh.rollback()
     
-    def _query(self, queryStr, params=None ):
-        cur = self.dbh.cursor()
-        cur.execute( queryStr, params )
-        return cur
-    
     #
     #   Task
     #
@@ -99,7 +111,7 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             for r in cur:
                 t.depends.append( r[0] )
@@ -114,7 +126,7 @@ class Database( object ):
         params = (taskId,)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
         finally:
@@ -136,7 +148,7 @@ class Database( object ):
             params = (offset, count)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
@@ -155,7 +167,7 @@ class Database( object ):
         data = []
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             for r in cur:
                 t = self._taskFromRow( self._rowToDict( cur.column_names, r ) )
@@ -178,7 +190,7 @@ class Database( object ):
         taskId = None
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit( True )
             taskId = cur.lastrowid
@@ -199,7 +211,7 @@ class Database( object ):
         params = (t.id,)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except mysql.connector.errors.IntegrityError:
@@ -239,7 +251,7 @@ class Database( object ):
         params.append( t.id )
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except Exception as e:
@@ -254,7 +266,7 @@ class Database( object ):
         params = { "tid" : taskId, "depid": depId}
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except mysql.connector.errors.IntegrityError:
@@ -271,7 +283,7 @@ class Database( object ):
         params = (taskId,depId)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except Exception as e:
@@ -292,7 +304,7 @@ class Database( object ):
         params = (workerId,)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             data = self._rowToDict( cur.column_names, cur.fetchone() )
         finally:
@@ -327,7 +339,7 @@ class Database( object ):
         params = { "id" : w.id, "dr": w.drain}
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except Exception as e:
@@ -346,7 +358,7 @@ class Database( object ):
         params = (w.id,)
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except Exception as e:
@@ -376,7 +388,7 @@ class Database( object ):
         params.append( w.id )
         
         try:
-            cur = self.dbh.cursor()
+            cur = self.cursor()
             cur.execute( quer, params )
             self._commit()
         except Exception as e:

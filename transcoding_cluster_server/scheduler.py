@@ -66,7 +66,7 @@ class Scheduler( object ):
         with self.db:
             try:
                 self.db.autoCommit = False
-                self.db.dbh.start_transaction( consistent_snapshot=True, isolation_level="READ COMMITTED", readonly=False )
+                self.db.start_transaction( consistent_snapshot=True, isolation_level="READ COMMITTED", readonly=False )
 
                 self.requireWorkerFree( workerId )
                 tasks = self.db.queryTasks( self.nextTaskQuery, (workerId,) )
