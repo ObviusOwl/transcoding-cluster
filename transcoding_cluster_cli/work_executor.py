@@ -3,6 +3,7 @@ import subprocess
 import traceback
 
 from transcoding_cluster import task as taskModule
+from transcoding_cluster.errors import ApiError
 
 class WorkExecutor( object ):
     # TODO: extra thread for sending alive messages to the server
@@ -61,11 +62,15 @@ class WorkExecutor( object ):
 
                 self.task = None
                 
-            except Exception as e:
+            except ApiError as e:
                 doApiRateLimit = True
-                self.logLine( traceback.format_exc() )
+                self.logLine( str( e ) )
                 self.failCurrentTask()
             except (SystemExit, KeyboardInterrupt) as e:
                 self.failCurrentTask()
                 # here we do not want to swallow the exception, but propagate the clean shutdown
                 raise e from None
+            except Exception as e:
+                doApiRateLimit = True
+                self.logLine( traceback.format_exc() )
+                self.failCurrentTask()
