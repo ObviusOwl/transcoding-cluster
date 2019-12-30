@@ -1,6 +1,7 @@
 import json
 
-from .table_writer import TableWriter
+from transcoding_cluster.task import TaskStatus
+from .table_writer import TableWriter, AnsiColor
 from .task_view import TaskHumanView
 
 class TaskListListView( object ):
@@ -35,14 +36,19 @@ class TaskListJsonView( object ):
 class TaskListTableView( object ):
     
     def __init__(self):
-        pass
+        self.statusColorMap = { 
+            TaskStatus.schedulable: AnsiColor.default,
+            TaskStatus.dispatched: AnsiColor.yellow,
+            TaskStatus.done: AnsiColor.green,
+            TaskStatus.failed: AnsiColor.red,
+        }
     
     def show(self, tList):
         if tList == None:
             return
         
         ta = TableWriter()
-        headLine = ["ID", "Status", "Prio.", "Worker", "Affinity"] 
+        headLine = ["ID", "Status", "Prio.", "Worker", "Affinity", "Command"] 
         ta.appendRow( headLine )
         
         for t in tList:
@@ -52,10 +58,15 @@ class TaskListTableView( object ):
             row.append( str(t.priority) )
             row.append( str(t.workerId) )
             row.append( str(t.affinity) )
-            ta.appendRow( row )
-        
-        ta.setConf( 0, None, "heading", True)
-        for i in range(len(headLine)):
-            ta.setConf( None, i, "wrap", False)
+            row.append( str(t.command) )
+            row = ta.appendRow( row )
 
+            if t.status in self.statusColorMap:
+                row.color = self.statusColorMap[ t.status ]
+        
+        ta.table.rows[ 0 ].isHeader = True
+        for col in ta.table.columns:
+            col.textWrap = False
+        ta.table.columns[ 5 ].textWrap = True
+        
         ta.display()
